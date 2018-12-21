@@ -10,7 +10,7 @@ typedef struct node
     int parent;
     int pos;
 } node;
-int huffman(node nodes[256], int size, node tr[256], int tr_size)
+int huffman(node *nodes, int size, node *tr, int tr_size)
 {
     if (tr_size < 2)
         return size;
@@ -37,7 +37,8 @@ int huffman(node nodes[256], int size, node tr[256], int tr_size)
     nodes[y].parent=size;
     nodes[size].pos = size;
     nodes[size].freq = nodes[x].freq + nodes[y].freq;
-    node new_tr[256];
+    nodes[size].c='\0';
+    node new_tr[tr_size];
     int cnt = 0;
     for (int i = 0; i < tr_size; i++)
         if (tr[i].pos != x && tr[i].pos != y)
@@ -46,8 +47,19 @@ int huffman(node nodes[256], int size, node tr[256], int tr_size)
     int new_size=huffman(nodes, size + 1, new_tr, tr_size - 1);
     return new_size;
 }
-
-void encoding_char(node nodes[256],int size,int pos,char *code){
+int findpos(node *nodes,int size,char c){
+    for(int i=0;i<size;i++){
+        if(nodes[i].c=='\0'){
+            break;
+        }
+        if(nodes[i].c==c){
+            return i;
+        }
+    }
+    return -1;
+}
+void encoding_char(node *nodes,int size,char c,char *code){
+    int pos=findpos(nodes,size,c);
     if(pos>=size)
         return ;
     strcpy(code,"");
@@ -72,16 +84,17 @@ void encoding_char(node nodes[256],int size,int pos,char *code){
         *(code+l-1-i)=tmp;
     }
 }
-void encoding_string(node nodes[256],int size,int pos[256],int num,char *code){
+void encoding_string(node *nodes,int size,char *str,char *code){
     char tmp[256];
     strcpy(code,"");
-    for(int i=0;i<num;i++){
-        encoding_char (nodes, size, pos[i], tmp);
+    int l=strlen(str);
+    for(int i=0;i<l;i++){
+        encoding_char (nodes, size, str[i], tmp);
         strcat(code,tmp);
     }
 }
-void decoding(node nodes[256],int size,char *code,char *str){
-    int l=strlen(code);
+void decoding(node *nodes,int size,char *code,char *str){
+    int l=strlen(code)+1;
     int pos=size-1;
     int cnt=0;
     strcpy(str,"");
@@ -100,59 +113,102 @@ void decoding(node nodes[256],int size,char *code,char *str){
     }
     str[cnt]='\0';
 }
+int count_char(char *str,node *nodes){
+    int l=strlen(str);
+    int cnt=0;
+    for(int i=0;i<l;i++){
+        int flag=0;
+        for(int k=0;k<cnt;k++){
+            if(nodes[k].c==str[i]){
+                flag=1;
+                nodes[i].freq+=1;
+                break;
+            }
+        }
+        //if the char is not in nodes, then create the node
+        if(flag==0){
+            nodes[cnt].c=str[i];
+            nodes[cnt].freq=1;
+            nodes[cnt].left=-1;
+            nodes[cnt].right=-1;
+            nodes[cnt].parent=-1;
+            nodes[cnt].pos=cnt;
+            cnt++;
+        }
+    }
+    return cnt;
+}
 int main(int argc, char *argv[])
 {
-    //the input data
-    double freq[] = {0.05, 0.29, 0.07, 0.08, 0.14, 0.23, 0.03, 0.11};
+//////////////////////test the first requirement////////////////////////////////
+    /* //the input data */
+    /* double freq[] = {0.05, 0.29, 0.07, 0.08, 0.14, 0.23, 0.03, 0.11}; */
+    /* node nodes[256]; */
+    /* for (int i = 0; i < 8; i++){ */
+    /*     nodes[i].pos = i;nodes[i].freq = freq[i]; */
+    /*     nodes[i].left = -1;nodes[i].right = -1; */
+    /*     nodes[i].parent=-1; */
+    /*     nodes[i].c='a'+i; */
+    /* } */
+    /* //build huffman tree */
+    /* int size=huffman(nodes, 8, nodes, 8); */
+    /* //test the huffman tree */
+    /* printf("%-8s%-8s%-8s%-8s%-8s%-8s\n","node","freq","left","right","parent","char"); */
+    /* for (int i = 0; i < size; i++){ */
+    /*     printf("node%-4d%-8.2lf", i, nodes[i].freq); */
+    /*     if (nodes[i].left != -1) */
+    /*         printf("%-8d", nodes[i].left); */
+    /*     else */
+    /*         printf("%-8s", "NULL"); */
+    /*     if (nodes[i].right != -1) */
+    /*         printf("%-8d", nodes[i].right); */
+    /*     else */
+    /*         printf("%-8s", "NULL"); */
+    /*     if (nodes[i].parent != -1) */
+    /*         printf("%-8d", nodes[i].parent); */
+    /*     else */
+    /*         printf("%-8s", "NULL"); */
+    /*     printf("%c",nodes[i].c); */
+    /*     printf("\n"); */
+    /* } */
+
+    /* //encoding the infomation */
+    /* // single char encoding */
+    /* printf("\nsingle char encoding\n"); */
+    /* for(int i=0;i<8;i++){ */
+    /*     char code[256]=""; */
+    /*     encoding_char (nodes, size, i,code); */
+    /*     printf ("%s\n",code); */
+    /* } */
+
+    /* //string encoding */
+    /* printf("\nstring encoding\n"); */
+    /* char code[256]; */
+    /* encoding_string (nodes, size,8,code); */
+    /* printf("%s\n",code); */
+
+    /* //decoding the infomation */
+    /* // string decoding */
+    /* printf("\nstring decoding\n"); */
+    /* char str[256]; */
+    /* decoding (nodes, size, code, str); */
+    /* printf("%s\n",str); */
+////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////test the second requirement///////////////////////////////
+    //test the second requirement
+    char content[256]="THIS PROGRAME IS MY FAVORITE";
     node nodes[256];
-    for (int i = 0; i < 8; i++){
-        nodes[i].pos = i;nodes[i].freq = freq[i];
-        nodes[i].left = -1;nodes[i].right = -1;
-        nodes[i].parent=-1;
-        nodes[i].c='a'+i;
-    }
-    //build huffman tree
-    int size=huffman(nodes, 8, nodes, 8);
-    //test the huffman tree
-    printf("%-8s%-8s%-8s%-8s%-8s\n","node","freq","left","right","parent");
-    for (int i = 0; i < size; i++){
-        printf("node%-4d%-8.2lf", i, nodes[i].freq);
-        if (nodes[i].left != -1)
-            printf("%-8d", nodes[i].left);
-        else
-            printf("%-8s", "NULL");
-        if (nodes[i].right != -1)
-            printf("%-8d", nodes[i].right);
-        else
-            printf("%-8s", "NULL");
-        if (nodes[i].parent != -1)
-            printf("%-8d", nodes[i].parent);
-        else
-            printf("%-8s", "NULL");
-        printf("\n");
-    }
-
-    //encoding the infomation
-    // single char encoding
-    printf("\nsingle char encoding\n");
-    int a[]={0,1,2,3,4,5,6,7};
-    for(int i=0;i<8;i++){
-        char code[256]="";
-        encoding_char (nodes, size, i,code);
-        printf ("%s\n",code);
-    }
-
-    //string encoding
-    printf("\nstring encoding\n");
+    int size=count_char(content, nodes);
+    size=huffman (nodes, size, nodes, size);
     char code[256];
-    encoding_string (nodes, size, a, 8,code);
+    encoding_string (nodes, size, content, code);
     printf("%s\n",code);
-
-    //decoding the infomation
-    // string decoding
-    printf("\nstring decoding\n");
     char str[256];
     decoding (nodes, size, code, str);
     printf("%s\n",str);
+////////////////////////////////////////////////////////////////////////////////
+
+
     return 0;
 }
